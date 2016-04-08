@@ -1,0 +1,72 @@
+/*
+ *  Copyright 2010 by Texas Instruments Incorporated.
+ *  All rights reserved. Property of Texas Instruments Incorporated.
+ *  Restricted rights to use, duplicate or disclose this code are
+ *  granted through contract.
+ *
+ */
+/*
+ *  ======== tsk.tcf ========
+ *  Configuration script used to generate the example's configuration files
+ */
+
+/*utils.loadPlatform("ti.platforms.ezdsp5515"); */
+utils.loadPlatform("ti.platforms.ezdsp5505");
+
+bios.enableRealTimeAnalysis(prog);
+bios.enableMemoryHeaps(prog);
+bios.enableRtdx(prog);
+bios.enableTskManager(prog);
+
+/*
+ * Enable heaps in DARAM and define label SEG0 for heap usage.
+ */
+
+bios.DARAM.createHeap      = true;
+bios.DARAM.enableHeapLabel = true;
+bios.DARAM["heapLabel"]    = prog.extern("SEG0");
+bios.DARAM.heapSize        = 0x500;
+bios.MEM.BIOSOBJSEG = prog.get("DARAM");
+bios.MEM.MALLOCSEG = prog.get("DARAM");
+
+
+/*
+ *  Define the GBL memory model 
+ */
+
+bios.GBL.MEMORYMODEL = "LARGE";
+/* Increase the buffer size of the LOG_system LOG object */
+
+bios.LOG_system.bufLen = 512;
+
+/* Create a trace LOG object for printing basic program output.  */
+
+var trace = bios.LOG.create("trace");
+trace.bufLen = 1024;
+trace.logType = "circular";
+
+bios.HWI.instance("HWI_INT8").useDispatcher = 1;
+bios.HWI.instance("HWI_INT8").fxn = prog.extern("DmaInterrupt");
+
+
+bios.TSK.create("TSKFILTER");
+bios.TSK.instance("TSKFILTER").priority = 5;
+bios.TSK.instance("TSKFILTER").fxn = prog.extern("TSK_Filter");
+
+bios.MBX.OBJMEMSEG = prog.get("DARAM");
+var MBXDMA = bios.MBX.create("MBX_Dma");
+MBXDMA.comment="Mailbox to receive samples from HWI for filtering";
+MBXDMA.messageSize = 49;
+MBXDMA.length = 1;
+MBXDMA.elementSeg = prog.get("DARAM");
+
+
+bios.SEM.OBJMEMSEG = prog.get("DARAM");
+var dmaSEM = bios.SEM.create("dmaSEM");
+dmaSEM.count = 0;
+
+// !GRAPHICAL_CONFIG_TOOL_SCRIPT_INSERT_POINT!
+
+if (config.hasReportedError == false) {
+    prog.gen();
+}
