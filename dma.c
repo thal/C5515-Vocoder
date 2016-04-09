@@ -287,9 +287,9 @@ void DmaInterrupt(void)
             // The receive "pong" buffer is full
         	mbxMsg[0] = PONG;
         	int i;
-			for(i = 0; i < DMA_PING_PONG_BUFFER_LENGTH; i++)
+			for(i = 0; i < 8; i++)
 			{
-				mbxMsg[i+1] = ROUND_SHIFT_32_TO_16(g_dmaInputBuffer[PONG+i]);
+				mbxMsg[i+1] = ROUND_SHIFT_32_TO_16(g_dmaInputBuffer[PONG+(i*6)]);
 			}
 
         }
@@ -298,14 +298,15 @@ void DmaInterrupt(void)
             // The receive "ping" buffer is full
 			mbxMsg[0] = PING;
 			int i;
-			for(i = 0; i < DMA_PING_PONG_BUFFER_LENGTH; i++)
+			for(i = 0; i < 8; i++)
 			{
-				mbxMsg[i+1] = ROUND_SHIFT_32_TO_16(g_dmaInputBuffer[PING+i]);
+				mbxMsg[i+1] = ROUND_SHIFT_32_TO_16(g_dmaInputBuffer[PING+(i*6)]);
 			}
         }
+       	MBX_post(&MBX_Dma, &mbxMsg, 0);
 
         /* This is our interrupt clear the flag by writing a 1 */
-        MBX_post(&MBX_Dma, &mbxMsg, 0);
+
         DMAIFR = BIT1;
     }
 }

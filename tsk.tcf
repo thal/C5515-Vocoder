@@ -56,7 +56,7 @@ bios.TSK.instance("TSKFILTER").fxn = prog.extern("TSK_Filter");
 bios.MBX.OBJMEMSEG = prog.get("DARAM");
 var MBXDMA = bios.MBX.create("MBX_Dma");
 MBXDMA.comment="Mailbox to receive samples from HWI for filtering";
-MBXDMA.messageSize = 49;
+MBXDMA.messageSize = 9;
 MBXDMA.length = 1;
 MBXDMA.elementSeg = prog.get("DARAM");
 
