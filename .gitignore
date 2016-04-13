@@ -17,3 +17,4 @@ targetConfigs/
 *.toc
 *.swp
 speech.wav
+*.wav

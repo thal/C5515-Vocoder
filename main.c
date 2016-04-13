@@ -1,20 +1,13 @@
 #include <tskcfg.h>
 #include <stdint.h>
+#include <string.h>
+#include "defs.h"
 #include "usbstk5515.h"
 #include "i2s.h"
 #include "dma.h"
 #include "aic3204.h"
-#include "FIR.h"
-#include "filters.h"
+#include "s_Filters.h"
 #include "nco.h"
-
-#define ROUND_SHIFT_32_TO_16(a) (_lshrs(_sround(a),16))
-
-#define IN_FRAME_SIZE 8
-#define OUT_FRAME_SIZE DMA_PING_PONG_BUFFER_LENGTH
-#define IN_PER_OUT DMA_PING_PONG_BUFFER_LENGTH / IN_FRAME_SIZE
-
-#define NUM_FILTERS 4
 
 extern int32_t g_dmaOutputBuffer[DMA_OUTPUT_BUFFER_LENGTH];
 
@@ -28,6 +21,9 @@ int main()
 
 	ConfigureAic3204();
 	EnableI2sPort();
+
+	NCO_setFreq(200);
+	NCO_setAtt(5);
 }
 void TSK_Analysis()
 {
@@ -38,7 +34,8 @@ void TSK_Analysis()
 	{
 		MBX_pend(&MBX_Dma, &msg_samples, SYS_FOREVER);
 
-		memcpy(&(envelopes[0]), &(msg_samples[0]), IN_FRAME_SIZE + 1);
+		envelopes[0] = msg_samples[0];
+		memset(&(envelopes[1]), 0x7fff ,(IN_FRAME_SIZE*NUM_FILTERS));
 		MBX_post(&MBX_Env, &envelopes, 0);
 	}
 }
@@ -47,21 +44,35 @@ void TSK_Synthesis()
 {
 	int16_t msg_envelopes[(IN_FRAME_SIZE * NUM_FILTERS) + 1];
 
+	int16_t carrier[OUT_FRAME_SIZE];
+	int32_t outFrame[OUT_FRAME_SIZE];
+
 	while(1)
 	{
 		MBX_pend(&MBX_Env, &msg_envelopes, SYS_FOREVER);
 		SEM_pendBinary(&dmaSEM, SYS_FOREVER);
-		// TODO: properly the incoming envelopes to 48k
+		// TODO: properly upsample the incoming envelopes to 48k
 		volatile int whichBuf = msg_envelopes[0];
-		int i;
-		for(i = 0; i < IN_FRAME_SIZE; i++)
-		{
-			int j;
-			for(j = 0; j < IN_PER_OUT; j++)
-			{
-				g_dmaOutputBuffer[whichBuf + (i * IN_PER_OUT) + j] = _lsshl(msg_envelopes[i+1], 15);
-			}
 
+		NCO_fillFrame(carrier, OUT_FRAME_SIZE);
+
+		// Filter first channel
+		int16_t firstBand[OUT_FRAME_SIZE];
+		// Multiply envelope by carrier
+		int i;
+		for(i = 0; i < OUT_FRAME_SIZE; i++)
+		{
+		    firstBand[i] = _smpy(msg_envelopes[1 + (i/IN_PER_OUT)], carrier[i]);
+		}
+		sFilter(firstBand, outFrame, sDelayLines[0], sFilters[0]);
+
+
+		// Copy finished frame to DMA output buffer
+		// TODO: try to get rid of this copying step
+		for(i = 0; i < OUT_FRAME_SIZE; i++)
+		{
+			// Use only first channel envelope for now
+			g_dmaOutputBuffer[whichBuf + i] = outFrame[i];
 		}
 	}
 }
