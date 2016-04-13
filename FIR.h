@@ -17,12 +17,12 @@ void Filter(
 			int16_t * input,
 			int32_t * output,
 			int16_t * delayLine,
-			unsigned numberOfInputSamples);
+			const int16_t *  filterCoeffs);
 
-void SetFilter(const int16_t * filter, unsigned num);
-
-void SetMute(int val);
-
-int GetMute();
+void GetEnvelope(
+			int16_t * input,
+			int32_t * output,
+			int16_t * delayLine,
+			const int16_t *  filterCoeffs);
 
 #endif /* FIR_H_ */
