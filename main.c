@@ -1,11 +1,13 @@
 #include <tskcfg.h>
 #include <stdint.h>
 #include <string.h>
+#include <dsplib.h>
 #include "defs.h"
 #include "usbstk5515.h"
 #include "i2s.h"
 #include "dma.h"
 #include "aic3204.h"
+#include "a_Filters.h"
 #include "s_Filters.h"
 #include "nco.h"
 
@@ -22,7 +24,7 @@ int main()
 	ConfigureAic3204();
 	EnableI2sPort();
 
-	NCO_setFreq(200);
+	NCO_setFreq(220);
 	NCO_setAtt(5);
 }
 void TSK_Analysis()
@@ -33,9 +35,42 @@ void TSK_Analysis()
 	while(1)
 	{
 		MBX_pend(&MBX_Dma, &msg_samples, SYS_FOREVER);
-
 		envelopes[0] = msg_samples[0];
-		memset(&(envelopes[1]), 0x7fff ,(IN_FRAME_SIZE*NUM_FILTERS));
+		int16_t * samples = &(msg_samples[1]);
+
+		int n;
+		for(n = 0; n < NUM_FILTERS; n++)
+		{
+			// Get the envelope for each channel
+			// Bandpass filter
+			int16_t thisBand[IN_FRAME_SIZE];
+			fir((DATA*)samples,
+				(DATA*)aBpfFilters[n],
+				(DATA*)thisBand,
+				(DATA*)aBpfDelayLines[n],
+				IN_FRAME_SIZE, A_FILTER_LENGTH);
+			// Rectifier
+			int i;
+			for(i = 0; i < IN_FRAME_SIZE; i++)
+			{
+				thisBand[i] = _abss(thisBand[i]);
+			}
+			// Lowpass filter
+			fir((DATA*)thisBand,
+				(DATA*)aLpfFilters[n],
+				(DATA*)thisBand,
+				(DATA*)aLpfDelayLines[n],
+				IN_FRAME_SIZE, A_FILTER_LENGTH);
+
+			// Copy envelope to mailbox
+			// TODO: eliminate this copy step?
+			unsigned envStart = 1 + (n * IN_FRAME_SIZE);
+			for(i = 0; i < IN_FRAME_SIZE; i++)
+			{
+				envelopes[i] = thisBand[i];
+			}
+
+		}
 		MBX_post(&MBX_Env, &envelopes, 0);
 	}
 }
@@ -45,13 +80,14 @@ void TSK_Synthesis()
 	int16_t msg_envelopes[(IN_FRAME_SIZE * NUM_FILTERS) + 1];
 
 	int16_t carrier[OUT_FRAME_SIZE];
-	int32_t outFrame[OUT_FRAME_SIZE];
+	int16_t outFrame[OUT_FRAME_SIZE];
 
 	while(1)
 	{
 		MBX_pend(&MBX_Env, &msg_envelopes, SYS_FOREVER);
 		SEM_pendBinary(&dmaSEM, SYS_FOREVER);
 		// TODO: properly upsample the incoming envelopes to 48k
+
 		volatile int whichBuf = msg_envelopes[0];
 
 		NCO_fillFrame(carrier, OUT_FRAME_SIZE);
@@ -64,15 +100,39 @@ void TSK_Synthesis()
 		{
 		    firstBand[i] = _smpy(msg_envelopes[1 + (i/IN_PER_OUT)], carrier[i]);
 		}
-		sFilter(firstBand, outFrame, sDelayLines[0], sFilters[0]);
+		fir((DATA*)firstBand,
+			(DATA*)sFilters[0],
+			(DATA*)outFrame,
+			(DATA*)sDelayLines[0],
+			OUT_FRAME_SIZE, S_FILTER_LENGTH);
 
+		// Filter the remaining n-1 channels
+		int n;
+		for(n = 1; n < NUM_FILTERS; n++)
+		{
+			int16_t thisBand[OUT_FRAME_SIZE];
+			for(i = 0; i < OUT_FRAME_SIZE; i++)
+			{
+				unsigned envStart = 1 + (n * IN_FRAME_SIZE);
+				thisBand[i] = _smpy(msg_envelopes[envStart + (i/IN_PER_OUT)], carrier[i]);
+			}
+			fir((DATA*)thisBand,
+				(DATA*)sFilters[n],
+				(DATA*)thisBand,
+				(DATA*)sDelayLines[n],
+				OUT_FRAME_SIZE, S_FILTER_LENGTH);
+			// Add the filtered channel to the output frame
+			for(i = 0; i < OUT_FRAME_SIZE; i++)
+			{
+				outFrame[i] += thisBand[i];
+			}
+		}
 
 		// Copy finished frame to DMA output buffer
 		// TODO: try to get rid of this copying step
 		for(i = 0; i < OUT_FRAME_SIZE; i++)
 		{
-			// Use only first channel envelope for now
-			g_dmaOutputBuffer[whichBuf + i] = outFrame[i];
+			g_dmaOutputBuffer[whichBuf + i] = _lsshl(outFrame[i], 15);
 		}
 	}
 }

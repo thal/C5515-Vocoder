@@ -1,7 +1,7 @@
-carrier = transpose(audioread('song.wav'));
+carrier = transpose(audioread('testcarrier.wav'));
 noise = transpose(audioread('noise.wav'));
 noise = noise(1:length(carrier));
-carrier = carrier(1:length(noise)) + noise * 0.2;
+carrier = carrier(1:length(noise)) + noise * 0;
 speech = audioread('speech.wav');
 len = (floor(min(length(speech), length(carrier)/6)));
 

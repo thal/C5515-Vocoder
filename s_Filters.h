@@ -55,50 +55,12 @@ static const int16_t sbpf4[S_FILTER_LENGTH] =
 		-118, -53, -13, 9, 16, 22
 };
 
-static int16_t sDelayLine1[S_FILTER_LENGTH] = {0};
-static int16_t sDelayLine2[S_FILTER_LENGTH] = {0};
-static int16_t sDelayLine3[S_FILTER_LENGTH] = {0};
-static int16_t sDelayLine4[S_FILTER_LENGTH] = {0};
+static int16_t sDelayLine1[S_FILTER_LENGTH + 2] = {0};
+static int16_t sDelayLine2[S_FILTER_LENGTH + 2] = {0};
+static int16_t sDelayLine3[S_FILTER_LENGTH + 2] = {0};
+static int16_t sDelayLine4[S_FILTER_LENGTH + 2] = {0};
 
 const int16_t * sFilters[] = {sbpf1, sbpf2, sbpf3, sbpf4 };
 static int16_t * sDelayLines[] = { sDelayLine1, sDelayLine2, sDelayLine3, sDelayLine4 };
 
-void sFilter(
-			int16_t * input,
-			int32_t * output,
-			int16_t * delayLine,
-			const int16_t * filterCoeffs)
-{
-	unsigned i,j;
-
-	// Static because values must be preserved between function calls
-	static int xPos = 0;
-	static int hPos = 0;
-
-    for(i = 0; i < OUT_FRAME_SIZE; i++)
-	{
-		int32_t sample = 0;
-		delayLine[xPos] = input[i];
-
-		for(j = 0; j < S_FILTER_LENGTH; j++)
-		{
-			hPos = j - (xPos+1);
-			if(hPos < 0)
-				hPos = S_FILTER_LENGTH + hPos;
-			hPos = (S_FILTER_LENGTH - 1) - hPos;
-
-			int16_t x = delayLine[j];
-			int16_t h = filterCoeffs[hPos];
-
-			// Use saturated MAC with rounding intrinsic
-			sample = _smacr(sample, x, h);
-		}
-
-		xPos++;
-		if(xPos == S_FILTER_LENGTH)
-			xPos = 0;
-
-		output[i] = sample;
-	}
-}
 #endif /* S_FILTERS_H_ */
