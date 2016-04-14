@@ -37,7 +37,7 @@ for i = 1:nFilters
 end
 
 % for i = 1: nFilters
-%     plot(bandpassed1(i,1000:1500));hold on; plot(envelopes(i,1015:1515));
+%     plot(bandpassed1(i,1000:1200));hold on; plot(envelopes(i,1010:1210));
 %     figure();
 % end
     

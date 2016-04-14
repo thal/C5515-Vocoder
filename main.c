@@ -32,6 +32,10 @@ void TSK_Analysis()
 	int16_t msg_samples[IN_FRAME_SIZE + 1];
 	int16_t envelopes[(IN_FRAME_SIZE * NUM_FILTERS) + 1];
 
+//	static int16_t test_samples[400];
+//	static int16_t test_envelopes[400];
+//	unsigned samp_cnt,env_cnt = 0;
+
 	while(1)
 	{
 		MBX_pend(&MBX_Dma, &msg_samples, SYS_FOREVER);
@@ -54,6 +58,12 @@ void TSK_Analysis()
 			for(i = 0; i < IN_FRAME_SIZE; i++)
 			{
 				thisBand[i] = _abss(thisBand[i]);
+//				if(n == 3)
+//				{
+//					test_samples[samp_cnt++]= thisBand[i];
+//					if(samp_cnt == 400)
+//						samp_cnt = 0;
+//				}
 			}
 			// Lowpass filter
 			fir((DATA*)thisBand,
@@ -67,7 +77,14 @@ void TSK_Analysis()
 			unsigned envStart = 1 + (n * IN_FRAME_SIZE);
 			for(i = 0; i < IN_FRAME_SIZE; i++)
 			{
-				envelopes[i] = thisBand[i];
+				// Scale envelope by 1.5
+				envelopes[envStart + i] = thisBand[i] + _shrs(thisBand[i],1);
+//				if(n == 3)
+//				{
+//					test_envelopes[env_cnt++] = thisBand[i];
+//					if(env_cnt == 400)
+//						env_cnt = 0;
+//				}
 			}
 
 		}
