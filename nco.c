@@ -24,9 +24,10 @@ Uint32 delta;
  *
  * Arg: buf = pointer to ouput buffer
  */
+
 void NCO_fillFrame(int16_t * buf, unsigned num) {
 	Uint16 j;
-	Uint16 index;
+	Int16 index;
 	/* Play Tone */
 	for (j = 0; j < num; j++) {
 
@@ -47,7 +48,6 @@ void NCO_fillFrame(int16_t * buf, unsigned num) {
 		index = pa >> (16);
 
 		buf[j] = _shrs(index, ATT);
-
 		// Do this if you want to add attack/decay later
 		//buf[j] = _smpy(index >> ATT, scale);
 

@@ -1,26 +1,18 @@
-carrier = transpose(audioread('testcarrier.wav'));
+carrier = transpose(audioread('song.wav'));
 noise = transpose(audioread('noise.wav'));
 noise = noise(1:length(carrier));
-carrier = carrier(1:length(noise)) + noise * 0;
+carrier = carrier(1:length(noise)) + noise*0.3;
 speech = audioread('speech.wav');
 len = (floor(min(length(speech), length(carrier)/6)));
 
-
-% f = 1500;
-% t = 0:1/48000:(len/8000);
-%carrier = sin(2*pi*f*t);
-speech = speech * 5;
-carrier = carrier;
-
-
 speech = speech(1:len);
 carrier = carrier(1:len*6);
-[aFilts, envLpf] = filters(false, false);
-sFilts = filters2(false, false);
+
+nFilters = 4;
+[aFilts, envLpf] = filters(nFilters, 30, false, false);
+sFilts = filters2(nFilters, 200, false, false);
 
 
-
-nFilters = length(sFilts(:,1));
 
 bandpassed1 = zeros(nFilters, length(speech));
 for i = 1:nFilters

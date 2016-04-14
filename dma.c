@@ -289,7 +289,7 @@ void DmaInterrupt(void)
         	int i;
 			for(i = 0; i < 8; i++)
 			{
-				mbxMsg[i+1] = ROUND_SHIFT_32_TO_16(g_dmaInputBuffer[PONG+(i*6)]);
+				mbxMsg[i+1] = _lsadd(ROUND_SHIFT_32_TO_16(g_dmaInputBuffer[PONG+(i*6)]), 113);
 			}
 
         }
@@ -300,7 +300,7 @@ void DmaInterrupt(void)
 			int i;
 			for(i = 0; i < 8; i++)
 			{
-				mbxMsg[i+1] = ROUND_SHIFT_32_TO_16(g_dmaInputBuffer[PING+(i*6)]);
+				mbxMsg[i+1] = _lsadd(ROUND_SHIFT_32_TO_16(g_dmaInputBuffer[PING+(i*6)]), 113);
 			}
         }
        	MBX_post(&MBX_Dma, &mbxMsg, 0);

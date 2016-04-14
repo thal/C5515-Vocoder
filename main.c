@@ -25,7 +25,7 @@ int main()
 	EnableI2sPort();
 
 	NCO_setFreq(220);
-	NCO_setAtt(5);
+	NCO_setAtt(0);
 }
 void TSK_Analysis()
 {
@@ -57,13 +57,14 @@ void TSK_Analysis()
 			int i;
 			for(i = 0; i < IN_FRAME_SIZE; i++)
 			{
-				thisBand[i] = _abss(thisBand[i]);
 //				if(n == 3)
 //				{
 //					test_samples[samp_cnt++]= thisBand[i];
 //					if(samp_cnt == 400)
 //						samp_cnt = 0;
 //				}
+				thisBand[i] = _abss(thisBand[i]);
+
 			}
 			// Lowpass filter
 			fir((DATA*)thisBand,
@@ -77,13 +78,17 @@ void TSK_Analysis()
 			unsigned envStart = 1 + (n * IN_FRAME_SIZE);
 			for(i = 0; i < IN_FRAME_SIZE; i++)
 			{
-				// Scale envelope by 1.5
-				envelopes[envStart + i] = thisBand[i] + _shrs(thisBand[i],1);
+				// Scale envelope by 5
+				envelopes[envStart + i] = _lsshl(thisBand[i], 3);
 //				if(n == 3)
 //				{
 //					test_envelopes[env_cnt++] = thisBand[i];
 //					if(env_cnt == 400)
+//					{
 //						env_cnt = 0;
+//						asm(" NOP ");
+//					}
+//
 //				}
 			}
 
@@ -99,10 +104,10 @@ void TSK_Synthesis()
 	int16_t carrier[OUT_FRAME_SIZE];
 	int16_t outFrame[OUT_FRAME_SIZE];
 
+
 	while(1)
 	{
 		MBX_pend(&MBX_Env, &msg_envelopes, SYS_FOREVER);
-		SEM_pendBinary(&dmaSEM, SYS_FOREVER);
 		// TODO: properly upsample the incoming envelopes to 48k
 
 		volatile int whichBuf = msg_envelopes[0];
@@ -145,6 +150,7 @@ void TSK_Synthesis()
 			}
 		}
 
+		SEM_pendBinary(&dmaSEM, SYS_FOREVER);
 		// Copy finished frame to DMA output buffer
 		// TODO: try to get rid of this copying step
 		for(i = 0; i < OUT_FRAME_SIZE; i++)

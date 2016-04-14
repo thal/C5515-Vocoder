@@ -1,20 +1,22 @@
-function [filts, envFilts] = filters(doScale, doPlot)
+function [filts, envFilts] = filters(nFilters, N, doScale, doPlot)
 close all;
 
 Fs = 8000;
 FsBy2 = Fs/2;
 
 % Same passband ripple and stopband attenuation for all filters
-Rp = .2;       % Maximum passband ripple
-Rs = 60;        % Minimum stop band attenuation
-N = 20;
+Rs = 55;        % Minimum stop band attenuation
+%N = 30;
 
 % centers = [ 240 360 480 600 720 840 1000 1150 1300 1450 1600 1800 2000 2200 2400 2700];
 % widths = [120 120 120 120 120 120 150 150 150 150 150 200 200 200 200 300];
 
-centers = [ 200 400 800 1600];
-%centers = 240:(2000-240)/5:2000
-widths = centers;
+%centers = [ 200 400 800 1600];
+startfreq = 100;
+stopfreq = 3500;
+bWidth = (stopfreq - startfreq) / nFilters;
+centers = (startfreq + (bWidth/2)) : bWidth : (stopfreq - (bWidth/2));
+widths = ones(1,nFilters) * bWidth;
 
 filts = zeros(length(centers), N+1);
 envFilts = zeros(length(centers), N+1);
@@ -24,7 +26,7 @@ for i = 1:length(centers)
     fwidth = widths(i);
     Wp = [fcenter-(fwidth/2), fcenter+(fwidth/2)]/FsBy2;
     bpf = fir1(N, Wp, 'bandpass',chebwin(N+1, Rs));
-    Wpl = (fcenter*0.75)/FsBy2;
+    Wpl = (fcenter)/FsBy2;
     lpf = fir1(N, Wpl, chebwin(N+1,Rs));
     if(doScale)
         filts(i, 1:N+1) = round(bpf .* 32767);
