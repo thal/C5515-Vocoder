@@ -1,16 +1,18 @@
+close all;
+
 carrier = transpose(audioread('song.wav'));
 noise = transpose(audioread('noise.wav'));
 noise = noise(1:length(carrier));
 carrier = carrier(1:length(noise)) + noise*0.3;
-speech = audioread('speech.wav');
+speech = audioread('speech.wav') + (-114 / 32767);
 len = (floor(min(length(speech), length(carrier)/6)));
 
 speech = speech(1:len);
 carrier = carrier(1:len*6);
 
-nFilters = 4;
-[aFilts, envLpf] = filters(nFilters, 30, false, false);
-sFilts = filters2(nFilters, 200, false, false);
+nFilters = 5;
+[aFilts, envLpf] = filters(nFilters, 60, false, false);
+sFilts = filters2(nFilters, 400, false, false);
 
 
 

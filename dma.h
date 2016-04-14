@@ -18,5 +18,6 @@
 /*******************************************************************************
 ****          F U N C T I O N   D E C L A R A T I O N S
 *******************************************************************************/
+void SetDcBias(int16_t bias);
 extern void DmaInitialize(void);
 extern void StartDma(void);

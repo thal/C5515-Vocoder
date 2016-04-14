@@ -75,9 +75,15 @@ static const void * SARAM[] = {(void *)0x8000, (void *)0x27FFF};
 int32_t g_dmaOutputBuffer[DMA_OUTPUT_BUFFER_LENGTH];
 int32_t g_dmaInputBuffer[DMA_INPUT_BUFFER_LENGTH];
 
+int16_t dcBias = 0;
+
 /*******************************************************************************
 ****          F U N C T I O N   I M P L E M E N T A T I O N
 *******************************************************************************/
+void SetDcBias(int16_t bias)
+{
+	dcBias = bias;
+}
 
 void DmaInitialize(void)
 {
@@ -289,7 +295,7 @@ void DmaInterrupt(void)
         	int i;
 			for(i = 0; i < 8; i++)
 			{
-				mbxMsg[i+1] = _lsadd(ROUND_SHIFT_32_TO_16(g_dmaInputBuffer[PONG+(i*6)]), 113);
+				mbxMsg[i+1] = _sadd(ROUND_SHIFT_32_TO_16(g_dmaInputBuffer[PONG+(i*6)]), dcBias);
 			}
 
         }
@@ -300,7 +306,7 @@ void DmaInterrupt(void)
 			int i;
 			for(i = 0; i < 8; i++)
 			{
-				mbxMsg[i+1] = _lsadd(ROUND_SHIFT_32_TO_16(g_dmaInputBuffer[PING+(i*6)]), 113);
+				mbxMsg[i+1] = _sadd(ROUND_SHIFT_32_TO_16(g_dmaInputBuffer[PING+(i*6)]), dcBias);
 			}
         }
        	MBX_post(&MBX_Dma, &mbxMsg, 0);

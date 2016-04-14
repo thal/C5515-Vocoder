@@ -11,15 +11,23 @@
 #include "s_Filters.h"
 #include "nco.h"
 
+#pragma DATA_ALIGN(thisABand, 4)
+#pragma DATA_ALIGN(thisSBand, 4)
+#pragma DATA_ALIGN(outFrame, 4)
+int16_t thisABand[IN_FRAME_SIZE];
+int16_t thisSBand[OUT_FRAME_SIZE];
+int16_t outFrame[OUT_FRAME_SIZE];
+
 extern int32_t g_dmaOutputBuffer[DMA_OUTPUT_BUFFER_LENGTH];
 
 int main()
 {
     USBSTK5515_init();
 
+    SetDcBias(113);
+
 	DmaInitialize();
 	StartDma();
-
 
 	ConfigureAic3204();
 	EnableI2sPort();
@@ -32,6 +40,7 @@ void TSK_Analysis()
 	int16_t msg_samples[IN_FRAME_SIZE + 1];
 	int16_t envelopes[(IN_FRAME_SIZE * NUM_FILTERS) + 1];
 
+	//static int16_t thisBand[IN_FRAME_SIZE];
 //	static int16_t test_samples[400];
 //	static int16_t test_envelopes[400];
 //	unsigned samp_cnt,env_cnt = 0;
@@ -39,6 +48,7 @@ void TSK_Analysis()
 	while(1)
 	{
 		MBX_pend(&MBX_Dma, &msg_samples, SYS_FOREVER);
+//		asm(" NOP ");
 		envelopes[0] = msg_samples[0];
 		int16_t * samples = &(msg_samples[1]);
 
@@ -47,10 +57,9 @@ void TSK_Analysis()
 		{
 			// Get the envelope for each channel
 			// Bandpass filter
-			int16_t thisBand[IN_FRAME_SIZE];
-			fir((DATA*)samples,
+			fir2((DATA*)samples,
 				(DATA*)aBpfFilters[n],
-				(DATA*)thisBand,
+				(DATA*)thisABand,
 				(DATA*)aBpfDelayLines[n],
 				IN_FRAME_SIZE, A_FILTER_LENGTH);
 			// Rectifier
@@ -63,13 +72,13 @@ void TSK_Analysis()
 //					if(samp_cnt == 400)
 //						samp_cnt = 0;
 //				}
-				thisBand[i] = _abss(thisBand[i]);
+				thisABand[i] = _abss(thisABand[i]);
 
 			}
 			// Lowpass filter
-			fir((DATA*)thisBand,
+			fir2((DATA*)thisABand,
 				(DATA*)aLpfFilters[n],
-				(DATA*)thisBand,
+				(DATA*)thisABand,
 				(DATA*)aLpfDelayLines[n],
 				IN_FRAME_SIZE, A_FILTER_LENGTH);
 
@@ -78,8 +87,8 @@ void TSK_Analysis()
 			unsigned envStart = 1 + (n * IN_FRAME_SIZE);
 			for(i = 0; i < IN_FRAME_SIZE; i++)
 			{
-				// Scale envelope by 5
-				envelopes[envStart + i] = _lsshl(thisBand[i], 3);
+				// Scale up envelope
+				envelopes[envStart + i] = _lsshl(thisABand[i], 3);
 //				if(n == 3)
 //				{
 //					test_envelopes[env_cnt++] = thisBand[i];
@@ -93,6 +102,7 @@ void TSK_Analysis()
 			}
 
 		}
+		// Drop the envelopes in the mailbox (haha)
 		MBX_post(&MBX_Env, &envelopes, 0);
 	}
 }
@@ -102,14 +112,12 @@ void TSK_Synthesis()
 	int16_t msg_envelopes[(IN_FRAME_SIZE * NUM_FILTERS) + 1];
 
 	int16_t carrier[OUT_FRAME_SIZE];
-	int16_t outFrame[OUT_FRAME_SIZE];
 
 
 	while(1)
 	{
 		MBX_pend(&MBX_Env, &msg_envelopes, SYS_FOREVER);
 		// TODO: properly upsample the incoming envelopes to 48k
-
 		volatile int whichBuf = msg_envelopes[0];
 
 		NCO_fillFrame(carrier, OUT_FRAME_SIZE);
@@ -122,7 +130,7 @@ void TSK_Synthesis()
 		{
 		    firstBand[i] = _smpy(msg_envelopes[1 + (i/IN_PER_OUT)], carrier[i]);
 		}
-		fir((DATA*)firstBand,
+		fir2((DATA*)firstBand,
 			(DATA*)sFilters[0],
 			(DATA*)outFrame,
 			(DATA*)sDelayLines[0],
@@ -132,24 +140,22 @@ void TSK_Synthesis()
 		int n;
 		for(n = 1; n < NUM_FILTERS; n++)
 		{
-			int16_t thisBand[OUT_FRAME_SIZE];
 			for(i = 0; i < OUT_FRAME_SIZE; i++)
 			{
 				unsigned envStart = 1 + (n * IN_FRAME_SIZE);
-				thisBand[i] = _smpy(msg_envelopes[envStart + (i/IN_PER_OUT)], carrier[i]);
+				thisSBand[i] = _smpy(msg_envelopes[envStart + (i/IN_PER_OUT)], carrier[i]);
 			}
-			fir((DATA*)thisBand,
+			fir2((DATA*)thisSBand,
 				(DATA*)sFilters[n],
-				(DATA*)thisBand,
+				(DATA*)thisSBand,
 				(DATA*)sDelayLines[n],
 				OUT_FRAME_SIZE, S_FILTER_LENGTH);
 			// Add the filtered channel to the output frame
 			for(i = 0; i < OUT_FRAME_SIZE; i++)
 			{
-				outFrame[i] += thisBand[i];
+				outFrame[i] += thisSBand[i];
 			}
 		}
-
 		SEM_pendBinary(&dmaSEM, SYS_FOREVER);
 		// Copy finished frame to DMA output buffer
 		// TODO: try to get rid of this copying step
@@ -157,5 +163,6 @@ void TSK_Synthesis()
 		{
 			g_dmaOutputBuffer[whichBuf + i] = _lsshl(outFrame[i], 15);
 		}
+		asm(" NOP ");
 	}
 }

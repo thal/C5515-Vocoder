@@ -1,15 +1,14 @@
 function filts = filters2(nFilters, N, doScale, doPlot)
-close all;
 Fs = 48000;
 FsBy2 = Fs/2;
 % Same passband ripple and stopband attenuation for all filters
-Rs = 55;        % Minimum stop band attenuation
+Rs = 50;        % Minimum stop band attenuation
 %N = 200;
 % centers = [ 240 360 480 600 720 840 1000 1150 1300 1450 1600 1800 2000 2200 2400 2700];
 % widths = [40 40 40 40 40 40 40 40 40 40 40 60 60 60 60 60];
 
 %centers = [ 200 400 800 1600];
-startfreq = 100;
+startfreq = 240;
 stopfreq = 3500;
 bWidth = (stopfreq - startfreq) / nFilters;
 centers = (startfreq + (bWidth/2)) : bWidth : (stopfreq - (bWidth/2));
