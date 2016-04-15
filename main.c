@@ -39,16 +39,11 @@ void TSK_Analysis()
 {
 	int16_t msg_samples[IN_FRAME_SIZE + 1];
 	int16_t envelopes[(IN_FRAME_SIZE * NUM_FILTERS) + 1];
-
-	//static int16_t thisBand[IN_FRAME_SIZE];
-//	static int16_t test_samples[400];
-//	static int16_t test_envelopes[400];
-//	unsigned samp_cnt,env_cnt = 0;
+	int16_t carrier[OUT_FRAME_SIZE];
 
 	while(1)
 	{
 		MBX_pend(&MBX_Dma, &msg_samples, SYS_FOREVER);
-//		asm(" NOP ");
 		envelopes[0] = msg_samples[0];
 		int16_t * samples = &(msg_samples[1]);
 
@@ -88,7 +83,8 @@ void TSK_Analysis()
 			for(i = 0; i < IN_FRAME_SIZE; i++)
 			{
 				// Scale up envelope
-				envelopes[envStart + i] = _lsshl(thisABand[i], 3);
+				//envelopes[envStart + i] = _lsshl(thisABand[i], 5);
+				envelopes[envStart + i] = thisABand[i];
 //				if(n == 3)
 //				{
 //					test_envelopes[env_cnt++] = thisBand[i];
@@ -102,23 +98,9 @@ void TSK_Analysis()
 			}
 
 		}
-		// Drop the envelopes in the mailbox (haha)
-		MBX_post(&MBX_Env, &envelopes, 0);
-	}
-}
 
-void TSK_Synthesis()
-{
-	int16_t msg_envelopes[(IN_FRAME_SIZE * NUM_FILTERS) + 1];
-
-	int16_t carrier[OUT_FRAME_SIZE];
-
-
-	while(1)
-	{
-		MBX_pend(&MBX_Env, &msg_envelopes, SYS_FOREVER);
 		// TODO: properly upsample the incoming envelopes to 48k
-		volatile int whichBuf = msg_envelopes[0];
+		volatile int whichBuf = envelopes[0];
 
 		NCO_fillFrame(carrier, OUT_FRAME_SIZE);
 
@@ -128,7 +110,7 @@ void TSK_Synthesis()
 		int i;
 		for(i = 0; i < OUT_FRAME_SIZE; i++)
 		{
-		    firstBand[i] = _smpy(msg_envelopes[1 + (i/IN_PER_OUT)], carrier[i]);
+		    firstBand[i] = _smpy(envelopes[1 + (i/IN_PER_OUT)], carrier[i]);
 		}
 		fir2((DATA*)firstBand,
 			(DATA*)sFilters[0],
@@ -137,13 +119,13 @@ void TSK_Synthesis()
 			OUT_FRAME_SIZE, S_FILTER_LENGTH);
 
 		// Filter the remaining n-1 channels
-		int n;
+		//int n;
 		for(n = 1; n < NUM_FILTERS; n++)
 		{
 			for(i = 0; i < OUT_FRAME_SIZE; i++)
 			{
 				unsigned envStart = 1 + (n * IN_FRAME_SIZE);
-				thisSBand[i] = _smpy(msg_envelopes[envStart + (i/IN_PER_OUT)], carrier[i]);
+				thisSBand[i] = _smpy(envelopes[envStart + (i/IN_PER_OUT)], carrier[i]);
 			}
 			fir2((DATA*)thisSBand,
 				(DATA*)sFilters[n],
@@ -163,6 +145,5 @@ void TSK_Synthesis()
 		{
 			g_dmaOutputBuffer[whichBuf + i] = _lsshl(outFrame[i], 15);
 		}
-		asm(" NOP ");
 	}
 }

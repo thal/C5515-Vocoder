@@ -3,7 +3,7 @@ Fs = 8000;
 FsBy2 = Fs/2;
 
 % Same passband ripple and stopband attenuation for all filters
-Rs = 30;        % Minimum stop band attenuation
+Rs = 50;        % Minimum stop band attenuation
 %N = 30;
 
 % centers = [ 240 360 480 600 720 840 1000 1150 1300 1450 1600 1800 2000 2200 2400 2700];
@@ -14,7 +14,7 @@ startfreq = 240;
 stopfreq = 3500;
 bWidth = (stopfreq - startfreq) / nFilters;
 centers = (startfreq + (bWidth/2)) : bWidth : (stopfreq - (bWidth/2));
-widths = ones(1,nFilters) * bWidth;
+widths = ones(1,nFilters) * bWidth /2;
 
 filts = zeros(length(centers), N+1);
 envFilts = zeros(length(centers), N+1);
@@ -24,7 +24,7 @@ for i = 1:length(centers)
     fwidth = widths(i);
     Wp = [fcenter-(fwidth/2), fcenter+(fwidth/2)]/FsBy2;
     bpf = fir1(N, Wp, 'bandpass',chebwin(N+1, Rs));
-    Wpl = (fcenter)/FsBy2;
+    Wpl = (fcenter - (fwidth * 0.5))/FsBy2;
     lpf = fir1(N, Wpl, chebwin(N+1,Rs));
     if(doScale)
         filts(i, 1:N+1) = round(bpf .* 32767);
@@ -42,7 +42,7 @@ for i = 1:length(centers)
         xlabel('Frequency(Hz)');
         ylabel('Magnitude(dB)');
         if(i < length(centers));
-            figure();
+            hold on;
         end
     end
 end

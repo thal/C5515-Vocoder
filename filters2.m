@@ -34,7 +34,7 @@ for i = 1:length(centers)
         xlabel('Frequency(Hz)');
         ylabel('Magnitude(dB)');
         if(i < length(centers));
-            figure();
+            hold on;
         end
     end
 end

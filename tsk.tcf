@@ -53,9 +53,9 @@ bios.TSK.create("TSK_ANALYSIS");
 bios.TSK.instance("TSK_ANALYSIS").priority = 5;
 bios.TSK.instance("TSK_ANALYSIS").fxn = prog.extern("TSK_Analysis");
 
-bios.TSK.create("TSK_SYNTHESIS");
-bios.TSK.instance("TSK_SYNTHESIS").priority = 6;
-bios.TSK.instance("TSK_SYNTHESIS").fxn = prog.extern("TSK_Synthesis");
+//bios.TSK.create("TSK_SYNTHESIS");
+//bios.TSK.instance("TSK_SYNTHESIS").priority = 6;
+//bios.TSK.instance("TSK_SYNTHESIS").fxn = prog.extern("TSK_Synthesis");
 
 bios.MBX.OBJMEMSEG = prog.get("DARAM");
 var MBXDMA = bios.MBX.create("MBX_Dma");
@@ -64,11 +64,11 @@ MBXDMA.messageSize = 9;
 MBXDMA.length = 1;
 MBXDMA.elementSeg = prog.get("DARAM");
 
-var MBXENV = bios.MBX.create("MBX_Env");
-MBXENVcomment="Mailbox to pass envelopes from analysis to synthesis";
-MBXENV.messageSize = 1 + (8 * 4);	// DMA input frame size times number of channels
-MBXENV.length = 1;
-MBXENV.elementSeg = prog.get("DARAM");
+//var MBXENV = bios.MBX.create("MBX_Env");
+//MBXENVcomment="Mailbox to pass envelopes from analysis to synthesis";
+//MBXENV.messageSize = 1 + (8 * 7);	// DMA input frame size times number of channels
+//MBXENV.length = 1;
+//MBXENV.elementSeg = prog.get("DARAM");
 
 
 bios.SEM.OBJMEMSEG = prog.get("DARAM");

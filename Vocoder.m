@@ -4,15 +4,16 @@ carrier = transpose(audioread('song.wav'));
 noise = transpose(audioread('noise.wav'));
 noise = noise(1:length(carrier));
 carrier = carrier(1:length(noise)) + noise*0.3;
-speech = audioread('speech.wav') + (-114 / 32767);
+speech = audioread('speech2.wav') + (-114 / 32767);
 len = (floor(min(length(speech), length(carrier)/6)));
 
 speech = speech(1:len);
 carrier = carrier(1:len*6);
 
-nFilters = 5;
-[aFilts, envLpf] = filters(nFilters, 60, false, false);
-sFilts = filters2(nFilters, 400, false, false);
+nFilters = 7;
+[aFilts, envLpf] = filters(nFilters, 80, false, false);
+%figure();
+sFilts = filters2(nFilters, 480, false, false);
 
 
 
@@ -31,7 +32,7 @@ for i = 1:nFilters
 end
 
 % for i = 1: nFilters
-%     plot(bandpassed1(i,1000:1200));hold on; plot(envelopes(i,1010:1210));
+%     plot(bandpassed1(i,1000:1200));hold on; plot(envelopes(i,1030:1230));
 %     figure();
 % end
     
