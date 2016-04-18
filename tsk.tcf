@@ -48,6 +48,9 @@ trace.logType = "circular";
 bios.HWI.instance("HWI_INT8").useDispatcher = 1;
 bios.HWI.instance("HWI_INT8").fxn = prog.extern("DmaInterrupt");
 
+bios.IDL.create("IDL0");
+bios.IDL.instance("IDL0").order = 1;
+bios.IDL.instance("IDL0").fxn = prog.extern("IDL_ButtonPress");
 
 bios.TSK.create("TSK_ANALYSIS");
 bios.TSK.instance("TSK_ANALYSIS").priority = 5;

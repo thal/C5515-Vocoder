@@ -2,14 +2,8 @@ function [filts, envFilts] = filters(nFilters, N, doScale, doPlot)
 Fs = 8000;
 FsBy2 = Fs/2;
 
-% Same passband ripple and stopband attenuation for all filters
 Rs = 50;        % Minimum stop band attenuation
-%N = 30;
 
-% centers = [ 240 360 480 600 720 840 1000 1150 1300 1450 1600 1800 2000 2200 2400 2700];
-% widths = [120 120 120 120 120 120 150 150 150 150 150 200 200 200 200 300];
-
-%centers = [ 200 400 800 1600];
 startfreq = 240;
 stopfreq = 3500;
 bWidth = (stopfreq - startfreq) / nFilters;
@@ -18,7 +12,7 @@ widths = ones(1,nFilters) * bWidth /2;
 
 filts = zeros(length(centers), N+1);
 envFilts = zeros(length(centers), N+1);
-% Band Pass 
+
 for i = 1:length(centers)
     fcenter = centers(i);
     fwidth = widths(i);
@@ -38,7 +32,7 @@ for i = 1:length(centers)
         [H1, W1] = freqz(bpf);
         
         plot(W1*FsBy2/pi, 20*log10(abs(H1)),'b')
-        axis([0 3300 -100, 1]);
+        axis([0 4000 -80, 1]);
         xlabel('Frequency(Hz)');
         ylabel('Magnitude(dB)');
         if(i < length(centers));

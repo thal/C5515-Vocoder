@@ -3,13 +3,14 @@
 #include <string.h>
 #include <dsplib.h>
 #include "defs.h"
-#include "usbstk5515.h"
 #include "i2s.h"
 #include "dma.h"
+#include "sar.h"
 #include "aic3204.h"
 #include "a_Filters.h"
 #include "s_Filters.h"
 #include "nco.h"
+#include "midi.h"
 
 #pragma DATA_ALIGN(thisABand, 4)
 #pragma DATA_ALIGN(thisSBand, 4)
@@ -22,9 +23,7 @@ extern int32_t g_dmaOutputBuffer[DMA_OUTPUT_BUFFER_LENGTH];
 
 int main()
 {
-    USBSTK5515_init();
-
-    SetDcBias(113);
+    SetDcBias(0);
 
 	DmaInitialize();
 	StartDma();
@@ -32,14 +31,22 @@ int main()
 	ConfigureAic3204();
 	EnableI2sPort();
 
-	NCO_setFreq(220);
+	Init_SAR();
+
+	NCO_setFreq(MIDI_freq[C3]);
 	NCO_setAtt(0);
+
+	rand16init();
 }
+
+
+
 void TSK_Analysis()
 {
 	int16_t msg_samples[IN_FRAME_SIZE + 1];
 	int16_t envelopes[(IN_FRAME_SIZE * NUM_FILTERS) + 1];
 	int16_t carrier[OUT_FRAME_SIZE];
+	int16_t noise[OUT_FRAME_SIZE];
 
 	while(1)
 	{
@@ -57,18 +64,12 @@ void TSK_Analysis()
 				(DATA*)thisABand,
 				(DATA*)aBpfDelayLines[n],
 				IN_FRAME_SIZE, A_FILTER_LENGTH);
+
 			// Rectifier
 			int i;
 			for(i = 0; i < IN_FRAME_SIZE; i++)
 			{
-//				if(n == 3)
-//				{
-//					test_samples[samp_cnt++]= thisBand[i];
-//					if(samp_cnt == 400)
-//						samp_cnt = 0;
-//				}
 				thisABand[i] = _abss(thisABand[i]);
-
 			}
 			// Lowpass filter
 			fir2((DATA*)thisABand,
@@ -85,16 +86,6 @@ void TSK_Analysis()
 				// Scale up envelope
 				//envelopes[envStart + i] = _lsshl(thisABand[i], 5);
 				envelopes[envStart + i] = thisABand[i];
-//				if(n == 3)
-//				{
-//					test_envelopes[env_cnt++] = thisBand[i];
-//					if(env_cnt == 400)
-//					{
-//						env_cnt = 0;
-//						asm(" NOP ");
-//					}
-//
-//				}
 			}
 
 		}
@@ -103,11 +94,17 @@ void TSK_Analysis()
 		volatile int whichBuf = envelopes[0];
 
 		NCO_fillFrame(carrier, OUT_FRAME_SIZE);
+		// Add noise to carrier
 
+		rand16((DATA*)noise, OUT_FRAME_SIZE);
+		int i;
+		for(i = 0; i < OUT_FRAME_SIZE; i++)
+		{
+			carrier[i] += _lshrs(noise[i], 6);
+		}
 		// Filter first channel
 		int16_t firstBand[OUT_FRAME_SIZE];
 		// Multiply envelope by carrier
-		int i;
 		for(i = 0; i < OUT_FRAME_SIZE; i++)
 		{
 		    firstBand[i] = _smpy(envelopes[1 + (i/IN_PER_OUT)], carrier[i]);
@@ -138,12 +135,31 @@ void TSK_Analysis()
 				outFrame[i] += thisSBand[i];
 			}
 		}
+
 		SEM_pendBinary(&dmaSEM, SYS_FOREVER);
 		// Copy finished frame to DMA output buffer
 		// TODO: try to get rid of this copying step
 		for(i = 0; i < OUT_FRAME_SIZE; i++)
 		{
-			g_dmaOutputBuffer[whichBuf + i] = _lsshl(outFrame[i], 15);
+			g_dmaOutputBuffer[whichBuf + i] = _lsshl(outFrame[i], 20);
 		}
+	}
+}
+
+void IDL_ButtonPress()
+{
+	static const MIDI_note scale[8] =
+	{
+		C3, D3, E3, F3, G3, A3, B3, C4
+	};
+	static int i = 0;
+
+	int key = Get_Sar_Key();
+
+	if(key == SW2)   // If SW2 pressed
+	{
+		MIDI_note newNote = scale[i++];
+		NCO_setFreq(MIDI_freq[newNote]);
+		if(i == 8) i = 0;
 	}
 }
