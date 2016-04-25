@@ -12,6 +12,7 @@
 #include "nco.h"
 #include "midi.h"
 
+// Output buffers for fir2 must be 4-byte aligned
 #pragma DATA_ALIGN(thisABand, 4)
 #pragma DATA_ALIGN(thisSBand, 4)
 #pragma DATA_ALIGN(outFrame, 4)
@@ -38,8 +39,6 @@ int main()
 
 	rand16init();
 }
-
-
 
 void TSK_Analysis()
 {
@@ -79,7 +78,6 @@ void TSK_Analysis()
 				IN_FRAME_SIZE, A_FILTER_LENGTH);
 
 			// Copy envelope to mailbox
-			// TODO: eliminate this copy step?
 			unsigned envStart = 1 + (n * IN_FRAME_SIZE);
 			for(i = 0; i < IN_FRAME_SIZE; i++)
 			{
@@ -90,12 +88,11 @@ void TSK_Analysis()
 
 		}
 
-		// TODO: properly upsample the incoming envelopes to 48k
 		volatile int whichBuf = envelopes[0];
 
 		NCO_fillFrame(carrier, OUT_FRAME_SIZE);
-		// Add noise to carrier
 
+		// Add noise to carrier
 		rand16((DATA*)noise, OUT_FRAME_SIZE);
 		int i;
 		for(i = 0; i < OUT_FRAME_SIZE; i++)
@@ -138,7 +135,6 @@ void TSK_Analysis()
 
 		SEM_pendBinary(&dmaSEM, SYS_FOREVER);
 		// Copy finished frame to DMA output buffer
-		// TODO: try to get rid of this copying step
 		for(i = 0; i < OUT_FRAME_SIZE; i++)
 		{
 			g_dmaOutputBuffer[whichBuf + i] = _lsshl(outFrame[i], 20);

@@ -7,14 +7,12 @@ carrier = carrier(1:length(noise)) + noise*0.3;
 speech = audioread('speech.wav') + (-114 / 32767);
 len = (floor(min(length(speech), length(carrier)/6)));
 
-plot(speech, 'black');
 
 speech = speech(1:len);
 carrier = carrier(1:len*6);
 
 nFilters = 7;
 [aFilts, envLpf] = filters(nFilters, 80, false, false);
-figure();
 sFilts = filters2(nFilters, 480, false, false);
 
 
@@ -50,9 +48,7 @@ end
 % plot(bandpassed1(5,1000:1100));hold on; plot(envelopes(5,1040:1140));
 % title('(d) Channel 5');
 % axis([0 100 -inf inf]);
-%     
 
- 
  
 upEnvelopes = zeros(nFilters, length(carrier));
 for i = 1: nFilters
@@ -79,3 +75,21 @@ for i = i:length(carrier)
         outSignal(i) = outSignal(i) + bandpassed2(j,i);
     end
 end
+
+
+upSpeech = zeros(1, length(carrier));
+
+for j = 1: length(speech)
+    upSpeech((6*j)-5:(6*j)) = speech(j);
+end
+
+% 
+% subplot(2,1,1);
+% plot(speech(86280:86280+1400));
+% title('(a) Input Signal');
+% axis([0 1400 -inf inf]);
+% subplot(2,1,2);
+% 
+% plot(outSignal(518500:518500+7100));
+% title('(b) Output Signal');
+% axis([0 7100 -inf inf]);

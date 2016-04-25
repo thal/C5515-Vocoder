@@ -183,7 +183,7 @@ void DmaInitialize(void)
      * Load the source address for channel 1 (I2S rx register).
      * Load the destination address for channel 1 (rx data in memory,
      */
-    address = I2S_RX_RIGHT_CHANNEL_ADDRESS;
+    address = I2S_RX_LEFT_CHANNEL_ADDRESS;
     DMACH1SSAL = address;
     DMACH1SSAU = address >> 16;
     address = MemoryAddress(g_dmaInputBuffer);
